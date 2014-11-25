@@ -81,6 +81,7 @@ librados::RadosClient::RadosClient(CephContext *cct_)
     finisher(cct),
     max_watch_notify_cookie(0)
 {
+  BLKIN_ZTRACE_INIT();
 }
 
 int64_t librados::RadosClient::lookup_pool(const char *name)
