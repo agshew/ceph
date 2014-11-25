@@ -21,6 +21,9 @@
 #include <signal.h>
 #include <ctype.h>
 #include <boost/scoped_ptr.hpp>
+#ifdef WITH_BLKIN
+#include <boost/lexical_cast.hpp>
+#endif
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -1568,6 +1571,8 @@ OSD::OSD(CephContext *cct_, ObjectStore *store_,
                                          cct->_conf->osd_op_log_threshold);
   op_tracker.set_history_size_and_duration(cct->_conf->osd_op_history_size,
                                            cct->_conf->osd_op_history_duration);
+
+  BLKIN_MSG_END(osd, "", 0, "osd." + boost::lexical_cast<string>(whoami));
 }
 
 OSD::~OSD()
@@ -5735,6 +5740,8 @@ void OSD::_dispatch(Message *m)
     {
       OpRequestRef op = op_tracker.create_request<OpRequest, Message*>(m);
       op->mark_event("waiting_for_osdmap");
+      BLKIN_OP_CREATE_TRACE(op, osd, osd_endpoint);
+      BLKIN_OP_TRACE_EVENT(op, osd, waiting_for_osdmap);
       // no map?  starting up?
       if (!osdmap) {
         dout(7) << "no OSDMap, not booted" << dendl;
@@ -7911,6 +7918,8 @@ void OSD::handle_op(OpRequestRef& op, OSDMapRef& osdmap)
     return;
   }
 
+  BLKIN_OP_TRACE_EVENT(op, osd, handling_op);
+
   // we don't need encoded payload anymore
   m->clear_payload();
 
@@ -8048,7 +8057,10 @@ void OSD::handle_op(OpRequestRef& op, OSDMapRef& osdmap)
   if (pg) {
     op->send_map_update = share_map.should_send;
     op->sent_epoch = m->get_map_epoch();
+    BLKIN_OP_CREATE_TRACE(op, pg, pg->pg_endpoint);
+    BLKIN_OP_TRACE_EVENT(op, pg, enqueuing_op);
     enqueue_op(pg, op);
+    BLKIN_OP_TRACE_EVENT(op, pg, enqueued_op);
     share_map.should_send = false;
   }
 }
@@ -8058,6 +8070,8 @@ void OSD::handle_replica_op(OpRequestRef& op, OSDMapRef& osdmap)
 {
   T *m = static_cast<T *>(op->get_req());
   assert(m->get_header().type == MSGTYPE);
+
+  BLKIN_OP_TRACE_EVENT(op, osd, handling_replica_op);
 
   dout(10) << __func__ << " " << *m << " epoch " << m->map_epoch << dendl;
   epoch_t up_epoch = service.get_up_epoch();
@@ -8097,7 +8111,9 @@ void OSD::handle_replica_op(OpRequestRef& op, OSDMapRef& osdmap)
   if (pg) {
     op->send_map_update = should_share_map;
     op->sent_epoch = m->map_epoch;
+    BLKIN_OP_CREATE_TRACE(op, pg, pg->pg_endpoint);
     enqueue_op(pg, op);
+    BLKIN_OP_TRACE_EVENT(op, osd, enqueued_replica_op);
   } else if (should_share_map) {
     C_SendMap *send_map = new C_SendMap(this, m->get_source(),
 					m->get_connection(),
@@ -8188,7 +8204,9 @@ void OSD::ShardedOpWQ::_process(uint32_t thread_index, heartbeat_handle_d *hb ) 
   delete f;
   *_dout << dendl;
 
+  BLKIN_OP_TRACE_EVENT(op, pg, dequeuing_op);
   osd->dequeue_op(item.first, op, tp_handle);
+  BLKIN_OP_TRACE_EVENT(op, pg, dequeued_op);
 
   {
 #ifdef WITH_LTTNG

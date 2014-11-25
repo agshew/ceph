@@ -52,6 +52,7 @@ struct ObjectOperation {
   vector<OSDOp> ops;
   int flags;
   int priority;
+  BLKIN_TRACE_REF(trace);
 
   vector<bufferlist*> out_bl;
   vector<Context*> out_handler;
@@ -68,6 +69,8 @@ struct ObjectOperation {
   size_t size() {
     return ops.size();
   }
+
+  BLKIN_OP_SET_TRACE_DECL()
 
   void set_last_op_flags(int flags) {
     assert(!ops.empty());
@@ -1031,6 +1034,7 @@ private:
   atomic_t global_op_flags; // flags which are applied to each IO op
   bool keep_balanced_budget;
   bool honor_osdmap_full;
+  BLKIN_END_REF(objecter_endpoint)
 
 public:
   void maybe_request_map();
@@ -1148,6 +1152,7 @@ public:
     epoch_t map_dne_bound;
 
     bool budgeted;
+    BLKIN_TRACE_REF(trace);
 
     /// true if we should resend this message on failure
     bool should_resend;
@@ -1188,6 +1193,8 @@ public:
 	target.base_oloc.key.clear();
     }
 
+    BLKIN_OP_SET_TRACE_DECL()
+
     bool operator<(const Op& other) const {
       return tid < other.tid;
     }
@@ -1198,6 +1205,7 @@ public:
 	delete out_handler.back();
 	out_handler.pop_back();
       }
+      BLKIN_OP_EVENT_IF(trace, trace, span_ended);
     }
   };
 
@@ -1720,7 +1728,9 @@ public:
     osd_timeout(osd_timeout),
     op_throttle_bytes(cct, "objecter_bytes", cct->_conf->objecter_inflight_op_bytes),
     op_throttle_ops(cct, "objecter_ops", cct->_conf->objecter_inflight_ops)
-  { }
+  {
+    BLKIN_MSG_END(objecter, "0.0.0.0", 0, objecter);
+  }
   ~Objecter();
 
   void init();
@@ -1903,6 +1913,7 @@ public:
 	     snapid_t snapid, bufferlist *pbl, int flags,
 	     Context *onack, version_t *objver = NULL) {
     Op *o = prepare_read_op(oid, oloc, op, snapid, pbl, flags, onack, objver);
+    BLKIN_OP_SET_TRACE(o, op.trace);
     return op_submit(o);
   }
   ceph_tid_t pg_read(uint32_t hash, object_locator_t oloc,
@@ -2073,6 +2084,29 @@ public:
     return read(oid, oloc, 0, 0, snap, pbl, flags | global_op_flags.read() | CEPH_OSD_FLAG_READ, onfinish, objver);
   }
 
+#ifdef WITH_BLKIN
+  ceph_tid_t read_traced(const object_t& oid, const object_locator_t& oloc,
+	     uint64_t off, uint64_t len, snapid_t snap, bufferlist *pbl, int flags,
+	     Context *onfinish, struct blkin_trace_info *info,
+	     version_t *objver = NULL, ObjectOperation *extra_ops = NULL) {
+    vector<OSDOp> ops;
+    int i = init_ops(ops, 1, extra_ops);
+    ops[i].op.op = CEPH_OSD_OP_READ;
+    ops[i].op.extent.offset = off;
+    ops[i].op.extent.length = len;
+    ops[i].op.extent.truncate_size = 0;
+    ops[i].op.extent.truncate_seq = 0;
+    Op *o = new Op(oid, oloc, ops, flags | global_op_flags | CEPH_OSD_FLAG_READ, onfinish, 0, objver);
+    o->snapid = snap;
+    o->outbl = pbl;
+    ZTracer::ZTraceRef t = ZTracer::create_ZTrace("librados", objecter_endpoint);
+    t->set_trace_info(info);
+    t->event("Objecter read");
+    o->set_trace(t);
+    free(info);
+    return op_submit(o);
+  }
+#endif // WITH_BLKIN
      
   // writes
   ceph_tid_t _modify(const object_t& oid, const object_locator_t& oloc,
@@ -2272,10 +2306,34 @@ public:
     return op_submit(o);
   }
 
+#ifdef WITH_BLKIN
+  ceph_tid_t write_traced(const object_t& oid, const object_locator_t& oloc,
+	      uint64_t off, uint64_t len, const SnapContext& snapc, const bufferlist &bl,
+	      utime_t mtime, int flags,
+	      Context *onack, Context *oncommit, struct blkin_trace_info *info,
+	      version_t *objver = NULL, ObjectOperation *extra_ops = NULL) {
+    vector<OSDOp> ops;
+    int i = init_ops(ops, 1, extra_ops);
+    ops[i].op.op = CEPH_OSD_OP_WRITE;
+    ops[i].op.extent.offset = off;
+    ops[i].op.extent.length = len;
+    ops[i].op.extent.truncate_size = 0;
+    ops[i].op.extent.truncate_seq = 0;
+    ops[i].indata = bl;
+    Op *o = new Op(oid, oloc, ops, flags | global_op_flags | CEPH_OSD_FLAG_WRITE, onack, oncommit, objver);
+    o->mtime = mtime;
+    o->snapc = snapc;
+    ZTracer::ZTraceRef t = ZTracer::create_ZTrace("librados", objecter_endpoint);
+    t->set_trace_info(info);
+    t->event("Objecter write");
+    o->set_trace(t);
+    free(info);
+    return op_submit(o);
+  }
+#endif // WITH_BLKIN
+
   void list_nobjects(NListContext *p, Context *onfinish);
   uint32_t list_nobjects_seek(NListContext *p, uint32_t pos);
-  void list_objects(ListContext *p, Context *onfinish);
-  uint32_t list_objects_seek(ListContext *p, uint32_t pos);
 
   // -------------------------
   // pool ops

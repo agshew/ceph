@@ -173,6 +173,9 @@ int main(int argc, const char **argv)
     return 0;
   }
 
+  global_init_daemonize(g_ceph_context, 0);
+  BLKIN_ZTRACE_INIT();
+
   // whoami
   char *end;
   const char *id = g_conf->name.get_id().c_str();
@@ -471,8 +474,7 @@ int main(int argc, const char **argv)
   if (r < 0)
     exit(1);
 
-  // Set up crypto, daemonize, etc.
-  global_init_daemonize(g_ceph_context, 0);
+  // Set up crypto, etc.
   common_init_finish(g_ceph_context);
 
   MonClient mc(g_ceph_context);

@@ -25,7 +25,11 @@
 
 class MOSDSubOp : public Message {
 
+#ifdef WITH_BLKIN
+  static const int HEAD_VERSION = 12;
+#else
   static const int HEAD_VERSION = 11;
+#endif
   static const int COMPAT_VERSION = 1;
 
 public:
@@ -103,6 +107,7 @@ public:
   virtual void decode_payload() {
     hobject_incorrect_pool = false;
     bufferlist::iterator p = payload.begin();
+    BLKIN_MSG_DO_INIT_TRACE();
     ::decode(map_epoch, p);
     ::decode(reqid, p);
     ::decode(pgid.pgid, p);
@@ -184,6 +189,7 @@ public:
     } else {
       pg_trim_rollback_to = pg_trim_to;
     }
+    BLKIN_MSG_DECODE_TRACE(12);
   }
 
   virtual void encode_payload(uint64_t features) {
@@ -191,6 +197,7 @@ public:
     ::encode(reqid, payload);
     ::encode(pgid.pgid, payload);
     ::encode(poid, payload);
+    BLKIN_GET_MASTER(mt);
 
     __u32 num_ops = ops.size();
     ::encode(num_ops, payload);
@@ -235,6 +242,7 @@ public:
     ::encode(pgid.shard, payload);
     ::encode(updated_hit_set_history, payload);
     ::encode(pg_trim_rollback_to, payload);
+    BLKIN_MSG_ENCODE_TRACE();
   }
 
   MOSDSubOp()
@@ -277,6 +285,8 @@ public:
       out << ", has_updated_hit_set_history";
     out << ")";
   }
+
+  BLKIN_MSG_END_DECL(MOSDSubOp)
 };
 
 

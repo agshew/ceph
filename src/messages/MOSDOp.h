@@ -32,7 +32,11 @@ class OSD;
 
 class MOSDOp : public Message {
 
+#ifdef WITH_BLKIN
+  static const int HEAD_VERSION = 5;
+#else
   static const int HEAD_VERSION = 4;
+#endif
   static const int COMPAT_VERSION = 3;
 
 private:
@@ -176,6 +180,7 @@ public:
 
   // marshalling
   virtual void encode_payload(uint64_t features) {
+    BLKIN_GET_MASTER(mt);
 
     OSDOp::merge_osd_op_vector_in_data(ops, data);
 
@@ -251,11 +256,14 @@ struct ceph_osd_request_head {
       ::encode(snaps, payload);
 
       ::encode(retry_attempt, payload);
+
+      BLKIN_MSG_ENCODE_TRACE();
     }
   }
 
   virtual void decode_payload() {
     bufferlist::iterator p = payload.begin();
+    BLKIN_MSG_DO_INIT_TRACE();
 
     if (header.version < 2) {
       // old decode
@@ -332,6 +340,8 @@ struct ceph_osd_request_head {
 	::decode(retry_attempt, p);
       else
 	retry_attempt = -1;
+
+      BLKIN_MSG_DECODE_TRACE(5);
     }
 
     OSDOp::split_osd_op_vector_in_data(ops, data);
@@ -374,6 +384,9 @@ struct ceph_osd_request_head {
     out << " e" << osdmap_epoch;
     out << ")";
   }
+
+  BLKIN_MSG_INFO_DECL(MOSDOp)
+  BLKIN_MSG_END_DECL(MOSDOp)
 };
 
 

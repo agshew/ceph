@@ -144,9 +144,11 @@ public:
   }
   void mark_sub_op_sent(string s) {
     mark_flag_point(flag_sub_op_sent, s);
+    BLKIN_TYPE_TRACE_EVENT(pg, "sub_op_sent | " + s);
   }
   void mark_commit_sent() {
     mark_flag_point(flag_commit_sent, "commit_sent");
+    BLKIN_TYPE_TRACE_EVENT(pg, "commit_sent");
   }
 
   utime_t get_dequeued_time() const {

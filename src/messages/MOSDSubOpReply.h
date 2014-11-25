@@ -30,7 +30,11 @@
  */
 
 class MOSDSubOpReply : public Message {
+#ifdef WITH_BLKIN
+  static const int HEAD_VERSION = 3;
+#else
   static const int HEAD_VERSION = 2;
+#endif
   static const int COMPAT_VERSION = 1;
 public:
   epoch_t map_epoch;
@@ -55,6 +59,7 @@ public:
 
   virtual void decode_payload() {
     bufferlist::iterator p = payload.begin();
+    BLKIN_MSG_DO_INIT_TRACE();
     ::decode(map_epoch, p);
     ::decode(reqid, p);
     ::decode(pgid.pgid, p);
@@ -84,8 +89,11 @@ public:
 	shard_id_t::NO_SHARD);
       pgid.shard = shard_id_t::NO_SHARD;
     }
+    BLKIN_MSG_DECODE_TRACE(3);
   }
   virtual void encode_payload(uint64_t features) {
+    BLKIN_GET_MASTER(mt);
+
     ::encode(map_epoch, payload);
     ::encode(reqid, payload);
     ::encode(pgid.pgid, payload);
@@ -102,6 +110,8 @@ public:
     ::encode(attrset, payload);
     ::encode(from, payload);
     ::encode(pgid.shard, payload);
+
+    BLKIN_MSG_ENCODE_TRACE();
   }
 
   epoch_t get_map_epoch() { return map_epoch; }
@@ -138,6 +148,7 @@ public:
     result(result_) {
     memset(&peer_stat, 0, sizeof(peer_stat));
     set_tid(req->get_tid());
+    BLKIN_MSG_CHECK_SPAN();
   }
   MOSDSubOpReply() : Message(MSG_OSD_SUBOPREPLY) {}
 private:
@@ -160,6 +171,7 @@ public:
     out << ")";
   }
 
+  BLKIN_MSG_END_DECL(MOSDSubOpReply)
 };
 
 
