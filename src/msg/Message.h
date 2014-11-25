@@ -18,6 +18,11 @@
 #include <stdlib.h>
 #include <ostream>
 
+#ifdef WITH_BLKIN
+#include <ztracer.hpp>
+#endif
+#include "common/blkin_wrapper.h"
+
 #include <boost/intrusive_ptr.hpp>
 #include <boost/intrusive/list.hpp>
 // Because intusive_ptr clobbers our assert...
@@ -221,6 +226,10 @@ protected:
   // currently throttled.
   uint64_t dispatch_throttle_size;
 
+#ifdef WITH_BLKIN
+  ZTracer::ZTraceEndpointRef message_endpoint;
+  ZTracer::ZTraceRef master_trace;
+#endif
   friend class Messenger;
 
 public:
@@ -233,7 +242,11 @@ public:
       dispatch_throttle_size(0) {
     memset(&header, 0, sizeof(header));
     memset(&footer, 0, sizeof(footer));
+#ifdef WITH_BLKIN
+    trace_end_after_span = false;
+#endif
   }
+
   Message(int t, int version=1, int compat_version=0)
     : connection(NULL),
       magic(0),
@@ -248,8 +261,14 @@ public:
     header.priority = 0;  // undef
     header.data_off = 0;
     memset(&footer, 0, sizeof(footer));
+#ifdef WITH_BLKIN
+    trace_end_after_span = false;
+#endif
   }
 
+#ifdef WITH_BLKIN
+  bool trace_end_after_span;
+#endif
   Message *get() {
     return static_cast<Message *>(RefCountedObject::get());
   }
@@ -286,6 +305,10 @@ public:
 
   uint32_t get_magic() { return magic; }
   void set_magic(int _magic) { magic = _magic; }
+
+#ifdef WITH_BLKIN
+  ZTracer::ZTraceRef get_master_trace() { return master_trace; }
+#endif // WITH_BLKIN
 
   /*
    * If you use get_[data, middle, payload] you shouldn't
@@ -417,6 +440,17 @@ public:
   virtual void dump(Formatter *f) const;
 
   void encode(uint64_t features, bool datacrc);
+
+#ifdef WITH_BLKIN
+  int init_trace_info();
+  int init_trace_info(struct blkin_trace_info *tinfo);
+  int init_trace_info(ZTracer::ZTraceRef t);
+  void trace(string event);
+  void trace(string key, string val);
+  int trace_basic_info();
+  virtual void trace_msg_info() { };
+  virtual bool create_message_endpoint();
+#endif // WITH_BLKIN
 };
 typedef boost::intrusive_ptr<Message> MessageRef;
 

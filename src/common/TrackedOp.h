@@ -116,6 +116,11 @@ public:
   void mark_event(TrackedOp *op, const string &evt,
                           utime_t time = ceph_clock_now(g_ceph_context));
 
+#ifdef WITH_BLKIN
+  void trace_event(TrackedOp *op, TrackedOpTraceRef t, const string &evt, TrackedOpEndpointRef ep);
+  void trace_keyval(TrackedOp *op, TrackedOpTraceRef t, const string &key,
+		    const string &val, TrackedOpEndpointRef ep);
+#endif
   void on_shutdown() {
     history.on_shutdown();
   }
@@ -141,6 +146,12 @@ private:
   friend class OpHistory;
   friend class OpTracker;
   xlist<TrackedOp*>::item xitem;
+#ifdef WITH_BLKIN
+  TrackedOpTraceRef osd_trace;
+  TrackedOpTraceRef pg_trace;
+  TrackedOpTraceRef journal_trace;
+  TrackedOpTraceRef filestore_trace;
+#endif
 protected:
   OpTracker *tracker; /// the tracker we are associated with
 
@@ -191,6 +202,20 @@ public:
     return events.rbegin()->second.c_str();
   }
   void dump(utime_t now, Formatter *f) const;
+
+#ifdef WITH_BLKIN
+  bool create_osd_trace(TrackedOpEndpointRef ep);
+  void trace_osd(string event);
+  void trace_osd(string key, string val);
+  bool create_pg_trace(TrackedOpEndpointRef ep);
+  void trace_pg(string event);
+  void get_pg_trace_info(struct blkin_trace_info *info);
+  bool create_journal_trace(TrackedOpEndpointRef ep);
+  void trace_journal(string event);
+  bool create_filestore_trace(TrackedOpEndpointRef ep);
+  void trace_filestore(string event);
+  TrackedOpTraceRef get_osd_trace() { return osd_trace; };
+#endif // WITH_BLKIN
 };
 
 #endif
