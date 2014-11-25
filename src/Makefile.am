@@ -41,10 +41,20 @@ include tools/Makefile.am
 
 ceph_mon_SOURCES = ceph_mon.cc
 ceph_mon_LDADD = $(LIBMON) $(LIBOS) $(CEPH_GLOBAL) $(LIBCOMMON)
+if WITH_BLKIN
+ceph_mon_CPPFLAGS = -DWITH_BLKIN $(AM_CPPFLAGS)
+ceph_mon_CXXFLAGS = $(BLKIN_CFLAGS) $(AM_CXXFLAGS)
+ceph_mon_LDADD += $(BLKIN_LIBS)
+endif
 bin_PROGRAMS += ceph-mon
 
 ceph_osd_SOURCES = ceph_osd.cc
 ceph_osd_LDADD = $(LIBOSD) $(CEPH_GLOBAL) $(LIBCOMMON)
+if WITH_BLKIN
+ceph_osd_CPPFLAGS = -DWITH_BLKIN $(AM_CPPFLAGS)
+ceph_osd_CXXFLAGS = $(BLKIN_CFLAGS) $(AM_CXXFLAGS)
+ceph_osd_LDADD += $(BLKIN_LIBS)
+endif
 bin_PROGRAMS += ceph-osd
 
 ceph_mds_SOURCES = ceph_mds.cc

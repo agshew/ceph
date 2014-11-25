@@ -26,9 +26,17 @@ libosd_la_SOURCES = \
 
 libosd_la_CXXFLAGS = ${AM_CXXFLAGS}
 libosd_la_LIBADD = $(LIBOSDC) $(LIBOS) $(LIBOSD_TYPES) $(LIBOS_TYPES)
+
 if WITH_LTTNG
 libosd_la_LIBADD += $(LIBOSD_TP)
 endif
+
+if WITH_BLKIN
+libosd_la_CPPFLAGS = -DWITH_BLKIN $(AM_CPPFLAGS)
+libosd_la_CXXFLAGS = $(BLKIN_CFLAGS) $(AM_CXXFLAGS)
+libosd_la_LIBADD += $(BLKIN_LIBS)
+endif
+
 noinst_LTLIBRARIES += libosd.la
 
 noinst_HEADERS += \

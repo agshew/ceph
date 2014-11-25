@@ -14,6 +14,13 @@ LIBRADOS_DEPS += $(LIBRADOS_TP)
 endif
 
 librados_la_LIBADD = $(LIBRADOS_DEPS) $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS)
+
+if WITH_BLKIN
+librados_la_CPPFLAGS = -DWITH_BLKIN $(AM_CPPFLAGS)
+librados_la_CXXFLAGS += $(BLKIN_CXXFLAGS)
+librados_la_LIBADD += $(BLKIN_LIBS)
+endif
+
 librados_la_LDFLAGS = ${AM_LDFLAGS} -version-info 2:0:0
 if LINUX
 librados_la_LDFLAGS += -export-symbols-regex '^rados_.*'
