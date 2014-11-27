@@ -5,6 +5,8 @@ librados_la_SOURCES = \
 	librados/snap_set_diff.cc \
 	librados/RadosXattrIter.cc
 
+librados_la_CPPFLAGS = $(AM_CPPFLAGS)
+
 # We need this to avoid basename conflicts with the librados build tests in test/Makefile.am
 librados_la_CXXFLAGS = ${AM_CXXFLAGS}
 
@@ -16,7 +18,7 @@ endif
 librados_la_LIBADD = $(LIBRADOS_DEPS) $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS)
 
 if WITH_BLKIN
-librados_la_CPPFLAGS = -DWITH_BLKIN $(AM_CPPFLAGS)
+librados_la_CPPFLAGS += -DWITH_BLKIN
 librados_la_CXXFLAGS += $(BLKIN_CXXFLAGS)
 librados_la_LIBADD += $(BLKIN_LIBS)
 endif
