@@ -66,12 +66,13 @@ You may want to check that ceph is up.::
 
 Now put something in usin rados, check that it made it, get it back, and remove it.::
 
-  rados put test-object-1 ./vstart.sh --pool=data
-  rados -p data ls
-  ceph osd map data test-object-1
-  rados get test-object-1 ./vstart-copy.sh --pool=data
+  ./rados mkpool test-blkin
+  ./rados put test-object-1 ./vstart.sh --pool=test-blkin
+  ./rados -p test-blkin ls
+  ./ceph osd map test-blkin test-object-1
+  ./rados get test-object-1 ./vstart-copy.sh --pool=test-blkin
   md5sum vstart*
-  rados rm test-object-1 --pool=data
+  ./rados rm test-object-1 --pool=test-blkin
 
 You could also use the example in ``examples/librados/``.
 

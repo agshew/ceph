@@ -74,6 +74,13 @@ struct OpRequest : public TrackedOp {
 
   void _dump(utime_t now, Formatter *f) const;
 
+#ifdef WITH_BLKIN
+  bool create_osd_trace(TrackedOpEndpointRef ep);
+  bool create_pg_trace(TrackedOpEndpointRef ep);
+  bool create_journal_trace(TrackedOpEndpointRef ep);
+  bool create_filestore_trace(TrackedOpEndpointRef ep);
+#endif // WITH_BLKIN
+
   bool has_feature(uint64_t f) const {
     return request->get_connection()->has_feature(f);
   }

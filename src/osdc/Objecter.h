@@ -2096,12 +2096,12 @@ public:
     ops[i].op.extent.length = len;
     ops[i].op.extent.truncate_size = 0;
     ops[i].op.extent.truncate_seq = 0;
-    Op *o = new Op(oid, oloc, ops, flags | global_op_flags | CEPH_OSD_FLAG_READ, onfinish, 0, objver);
+    Op *o = new Op(oid, oloc, ops, flags | global_op_flags.read() | CEPH_OSD_FLAG_READ, onfinish, 0, objver);
     o->snapid = snap;
     o->outbl = pbl;
     ZTracer::ZTraceRef t = ZTracer::create_ZTrace("librados", objecter_endpoint);
     t->set_trace_info(info);
-    t->event("Objecter read");
+    t->event("objecter_read");
     o->set_trace(t);
     free(info);
     return op_submit(o);
@@ -2320,12 +2320,12 @@ public:
     ops[i].op.extent.truncate_size = 0;
     ops[i].op.extent.truncate_seq = 0;
     ops[i].indata = bl;
-    Op *o = new Op(oid, oloc, ops, flags | global_op_flags | CEPH_OSD_FLAG_WRITE, onack, oncommit, objver);
+    Op *o = new Op(oid, oloc, ops, flags | global_op_flags.read() | CEPH_OSD_FLAG_WRITE, onack, oncommit, objver);
     o->mtime = mtime;
     o->snapc = snapc;
     ZTracer::ZTraceRef t = ZTracer::create_ZTrace("librados", objecter_endpoint);
     t->set_trace_info(info);
-    t->event("Objecter write");
+    t->event("objecter_write");
     o->set_trace(t);
     free(info);
     return op_submit(o);
@@ -2334,6 +2334,9 @@ public:
 
   void list_nobjects(NListContext *p, Context *onfinish);
   uint32_t list_nobjects_seek(NListContext *p, uint32_t pos);
+  void list_objects(ListContext *p, Context *onfinish);
+  uint32_t list_objects_seek(ListContext *p, uint32_t pos);
+
 
   // -------------------------
   // pool ops
