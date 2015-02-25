@@ -51,6 +51,12 @@ struct librados::IoCtxImpl {
 
   Objecter *objecter;
 
+#ifdef WITH_BLKIN
+  Mutex *aio_read_traced_lock;
+  Mutex *aio_write_traced_lock;
+#endif // WITH_BLKIN
+  BLKIN_END_REF(ioctx_endpoint)
+
   IoCtxImpl();
   IoCtxImpl(RadosClient *c, Objecter *objecter,
 	    int64_t poolid, snapid_t s);
@@ -174,11 +180,21 @@ struct librados::IoCtxImpl {
 	       bufferlist *pbl, size_t len, uint64_t off, uint64_t snapid);
   int aio_read(object_t oid, AioCompletionImpl *c,
 	       char *buf, size_t len, uint64_t off, uint64_t snapid);
+#ifdef WITH_BLKIN
+  int aio_read_traced(object_t oid, AioCompletionImpl *c,
+	       char *buf, size_t len, uint64_t off, uint64_t snapid,
+	       struct blkin_trace_info *info);
+#endif
   int aio_sparse_read(const object_t oid, AioCompletionImpl *c,
 		      std::map<uint64_t,uint64_t> *m, bufferlist *data_bl,
 		      size_t len, uint64_t off, uint64_t snapid);
   int aio_write(const object_t &oid, AioCompletionImpl *c,
 		const bufferlist& bl, size_t len, uint64_t off);
+#ifdef WITH_BLKIN
+  int aio_write_traced(const object_t &oid, AioCompletionImpl *c,
+		const bufferlist& bl, size_t len, uint64_t off,
+		struct blkin_trace_info *info);
+#endif
   int aio_append(const object_t &oid, AioCompletionImpl *c,
 		 const bufferlist& bl, size_t len);
   int aio_write_full(const object_t &oid, AioCompletionImpl *c,
