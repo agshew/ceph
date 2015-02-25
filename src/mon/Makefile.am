@@ -17,7 +17,17 @@ libmon_la_SOURCES = \
 	mon/HealthMonitor.cc \
 	mon/DataHealthService.cc \
 	mon/ConfigKeyService.cc
+
+libmon_la_CPPFLAGS = $(AM_CPPFLAGS)
+libmon_la_CXXFLAGS = $(AM_CXXFLAGS)
 libmon_la_LIBADD = $(LIBAUTH) $(LIBCOMMON) $(LIBOS) $(LIBMON_TYPES)
+
+if WITH_BLKIN
+libmon_la_CPPFLAGS += -DWITH_BLKIN
+libmon_la_CXXFLAGS += $(BLKIN_CFLAGS)
+libmon_la_LIBADD += $(BLKIN_LIBS)
+endif
+
 noinst_LTLIBRARIES += libmon.la
 
 noinst_HEADERS += \
@@ -46,4 +56,3 @@ noinst_HEADERS += \
 	mon/QuorumService.h \
 	mon/Session.h \
 	mon/mon_types.h
-
